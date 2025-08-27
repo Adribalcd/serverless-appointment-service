@@ -251,6 +251,12 @@ resources:
     ConfirmationQueueArn:
       Value: { 'Fn::GetAtt': [ConfirmationQueue, Arn] }
 
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!tests/**'
+    - 'docs/swagger.yml'
+
 plugins:
   - serverless-offline
   - serverless-aws-documentation
