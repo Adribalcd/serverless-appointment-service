@@ -11,3 +11,6 @@ tmp
 git
 .husky
 npx
+
+src/**/*.js
+src/**/*.js.map
