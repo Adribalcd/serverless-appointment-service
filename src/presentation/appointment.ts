@@ -4,11 +4,19 @@ import { CreateAppointmentUseCase } from '../application/usecases/CreateAppointm
 import { GetAppointmentsByInsuredUseCase } from '../application/usecases/GetAppointmentsByInsuredUseCase';
 import { DynamoDBAppointmentRepository } from '../infra/repositories/DynamoDBAppointmentRepository';
 import { SNSNotificationService } from '../infra/services/SNSNotificationService';
-import { ValidationService } from '../infra/ValidationService';
+import { ValidationService } from '../infra/services/ValidationService';
+import { ConfirmAppointmentUseCase } from '../application/usecases/ConfirmAppointmentUseCase';
+import { EventBridgePublisher } from '../infra/events/EventBridgePublisher';
 
 const appointmentRepository = new DynamoDBAppointmentRepository();
 const notificationService = new SNSNotificationService();
 const validationService = new ValidationService();
+const eventPublisher = new EventBridgePublisher();
+
+const confirmAppointmentUseCase = new ConfirmAppointmentUseCase(
+  appointmentRepository,
+  eventPublisher
+);
 
 export const createAppointment = new CreateAppointmentUseCase(
   appointmentRepository,
@@ -42,7 +50,7 @@ export const getAppointmentsByInsuredHandler: APIGatewayProxyHandlerV2 = async (
   if (!insuredId) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'insuredId is required' }),
+      body: JSON.stringify({ error: 'insuredId es requerido' }),
     };
   }
 
@@ -52,4 +60,27 @@ export const getAppointmentsByInsuredHandler: APIGatewayProxyHandlerV2 = async (
     statusCode: 200,
     body: JSON.stringify(result),
   };
+};
+
+export const processSQSConfirmationHandler = async (event: any) => {
+  console.log('Procesando confirmaciones SQS:', JSON.stringify(event, null, 2));
+
+  try {
+    for (const record of event.Records) {
+      const eventBridgeMessage = JSON.parse(record.body);
+
+      const appointmentData = eventBridgeMessage.detail;
+
+      console.log('Datos de cita a confirmar:', appointmentData);
+
+      await confirmAppointmentUseCase.execute(appointmentData.appointmentId);
+
+      console.log('Cita confirmada:', appointmentData.appointmentId);
+    }
+
+    return { statusCode: 200 };
+  } catch (error) {
+    console.error('Error procesando confirmaciones:', error);
+    throw error;
+  }
 };

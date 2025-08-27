@@ -44,7 +44,7 @@ describe('CreateAppointmentUseCase', () => {
 
     mockValidationService.validateInsuredId.mockReturnValue(true);
     mockValidationService.validateCountryISO.mockReturnValue(true);
-    mockValidationService.validateAppointmentRequest.mockResolvedValue(true);
+    mockValidationService.validateAppointmentRequest.mockReturnValue(true);
 
     const result = await useCase.execute(request);
 
@@ -62,7 +62,85 @@ describe('CreateAppointmentUseCase', () => {
     };
 
     mockValidationService.validateInsuredId.mockReturnValue(false);
-
     await expect(useCase.execute(request)).rejects.toThrow('Invalid insuredId format');
+  });
+
+  it('lanza error si countryISO es inválido', async () => {
+    const request: AppointmentRequest = {
+      insuredId: '12345',
+      scheduleId: 1,
+      countryISO: 'AR' as CountryISO,
+    };
+
+    mockValidationService.validateInsuredId.mockReturnValue(true);
+    mockValidationService.validateCountryISO.mockReturnValue(false);
+
+    await expect(useCase.execute(request)).rejects.toThrow('Invalid countryISO. Must be PE or CL');
+  });
+
+  it('lanza error si scheduleId es inválido', async () => {
+    const request: AppointmentRequest = {
+      insuredId: '12345',
+      scheduleId: 0,
+      countryISO: CountryISO.PE,
+    };
+
+    mockValidationService.validateInsuredId.mockReturnValue(true);
+    mockValidationService.validateCountryISO.mockReturnValue(true);
+
+    await expect(useCase.execute(request)).rejects.toThrow('Invalid scheduleId');
+  });
+
+  it('lanza error si validateAppointmentRequest falla', async () => {
+    const request: AppointmentRequest = {
+      insuredId: '12345',
+      scheduleId: 1,
+      countryISO: CountryISO.PE,
+    };
+
+    mockValidationService.validateInsuredId.mockReturnValue(true);
+    mockValidationService.validateCountryISO.mockReturnValue(true);
+    mockValidationService.validateAppointmentRequest.mockReturnValue(false);
+
+    await expect(useCase.execute(request)).rejects.toThrow('Invalid appointment request');
+  });
+
+  it('verifica que se llamen todos los métodos en el orden correcto', async () => {
+    const request: AppointmentRequest = {
+      insuredId: '12345',
+      scheduleId: 1,
+      countryISO: CountryISO.PE,
+    };
+
+    mockValidationService.validateInsuredId.mockReturnValue(true);
+    mockValidationService.validateCountryISO.mockReturnValue(true);
+    mockValidationService.validateAppointmentRequest.mockReturnValue(true);
+
+    await useCase.execute(request);
+
+    expect(mockValidationService.validateInsuredId).toHaveBeenCalledWith('12345');
+    expect(mockValidationService.validateCountryISO).toHaveBeenCalledWith(CountryISO.PE);
+    expect(mockValidationService.validateAppointmentRequest).toHaveBeenCalledWith(request);
+
+    expect(mockRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        appointmentId: expect.any(String),
+        insuredId: '12345',
+        scheduleId: 1,
+        countryISO: CountryISO.PE,
+        status: expect.any(String),
+        createdAt: expect.any(String),
+        updatedAt: expect.any(String),
+      })
+    );
+
+    expect(mockNotificationService.publishToCountry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        appointmentId: expect.any(String),
+        insuredId: '12345',
+        scheduleId: 1,
+        countryISO: CountryISO.PE,
+      })
+    );
   });
 });

@@ -15,21 +15,30 @@ export class ClProcessor implements CountryProcessor {
     });
 
     try {
-      // Lógica específica de Chile (puedes agregar validaciones específicas aquí)
       await this.insertAppointment(connection, appointment);
       await this.sendConfirmationEvent(appointment);
 
-      console.log('✅ Cita CL procesada correctamente:', appointment);
+      console.log(' Cita CL procesada correctamente:', appointment);
     } finally {
       await connection.end();
     }
   }
 
   private async insertAppointment(connection: any, appointment: AppointmentData): Promise<void> {
-    await connection.execute('INSERT INTO appointments (insuredId, scheduleId) VALUES (?, ?)', [
-      appointment.insuredId,
-      appointment.scheduleId,
-    ]);
+    const cleanInsuredId = appointment.insuredId.replace(/^"|"$/g, '');
+    const cleanAppointmentId = appointment.appointmentId.replace(/^"|"$/g, '');
+
+    console.log(' Datos limpiados para MySQL:', {
+      appointmentId: cleanAppointmentId,
+      insuredId: cleanInsuredId,
+      scheduleId: appointment.scheduleId,
+    });
+
+    await connection.execute(
+      `INSERT INTO appointments (appointmentId, insuredId, scheduleId) 
+     VALUES (?, ?, ?)`,
+      [cleanAppointmentId, cleanInsuredId, appointment.scheduleId]
+    );
   }
 
   private async sendConfirmationEvent(appointment: AppointmentData): Promise<void> {

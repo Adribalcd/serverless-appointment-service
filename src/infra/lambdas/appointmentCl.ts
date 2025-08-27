@@ -32,7 +32,7 @@ export async function parseAppointmentFromRecordCl(record: any) {
 
     return appointment;
   } catch (err) {
-    console.error('❌ Error parseando mensaje:', record.body, err);
+    console.error(' Error parseando mensaje:', record.body, err);
     return null;
   }
 }

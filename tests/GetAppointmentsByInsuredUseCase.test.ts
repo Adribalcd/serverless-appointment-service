@@ -26,7 +26,7 @@ describe('GetAppointmentsByInsuredUseCase', () => {
   });
 
   it('debería devolver citas cuando insuredId es válido', async () => {
-    const insuredId = '12345678';
+    const insuredId = '12345';
     const appointments: Appointment[] = [
       {
         appointmentId: '1',
@@ -55,6 +55,7 @@ describe('GetAppointmentsByInsuredUseCase', () => {
 
     expect(result).toHaveLength(2);
     expect(mockRepository.findByInsuredId).toHaveBeenCalledWith(insuredId);
+    expect(mockValidationService.validateInsuredId).toHaveBeenCalledWith(insuredId);
   });
 
   it('debería lanzar error si insuredId está vacío', async () => {
@@ -64,11 +65,11 @@ describe('GetAppointmentsByInsuredUseCase', () => {
   it('debería lanzar error si insuredId tiene formato inválido', async () => {
     mockValidationService.validateInsuredId.mockReturnValue(false);
 
-    await expect(useCase.execute('ABC')).rejects.toThrow('Invalid insuredId format');
+    await expect(useCase.execute('ABC')).rejects.toThrow('Formato invalido para insuredId');
   });
 
   it('debería devolver lista vacía si no hay citas', async () => {
-    const insuredId = '99999999';
+    const insuredId = '12345';
 
     mockValidationService.validateInsuredId.mockReturnValue(true);
     mockRepository.findByInsuredId.mockResolvedValue([]);
@@ -77,5 +78,25 @@ describe('GetAppointmentsByInsuredUseCase', () => {
 
     expect(result).toEqual([]);
     expect(mockRepository.findByInsuredId).toHaveBeenCalledWith(insuredId);
+  });
+
+  it('debería manejar errores del repositorio', async () => {
+    const insuredId = '12345';
+    const repositoryError = new Error('Database connection failed');
+
+    mockValidationService.validateInsuredId.mockReturnValue(true);
+    mockRepository.findByInsuredId.mockRejectedValue(repositoryError);
+
+    await expect(useCase.execute(insuredId)).rejects.toThrow('Database connection failed');
+  });
+
+  it('debería validar insuredId antes de consultar el repositorio', async () => {
+    const insuredId = 'INVALID';
+
+    mockValidationService.validateInsuredId.mockReturnValue(false);
+
+    await expect(useCase.execute(insuredId)).rejects.toThrow('Formato invalido para insuredId');
+
+    expect(mockRepository.findByInsuredId).not.toHaveBeenCalled();
   });
 });
