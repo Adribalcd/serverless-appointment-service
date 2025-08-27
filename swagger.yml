@@ -1,0 +1,164 @@
+openapi: 3.0.1
+info:
+  title: Appointment Service API
+  description: API para gestionar citas médicas usando Serverless, DynamoDB, SNS, SQS y RDS.
+  version: '1.0.0'
+servers:
+  - url: https://{apiId}.execute-api.{region}.amazonaws.com/dev
+    variables:
+      apiId:
+        default: 7000oxlp55
+      region:
+        default: us-east-1
+
+paths:
+  /appointments:
+    post:
+      summary: Crear una cita
+      description: Crea una cita nueva y la envía a SNS/SQS para su procesamiento.
+      operationId: createAppointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentRequest'
+      responses:
+        '201':
+          description: Cita creada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  appointmentId:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Listar citas por asegurado
+      description: Retorna todas las citas asociadas a un insuredId.
+      operationId: getAppointmentsByInsured
+      parameters:
+        - name: insuredId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Identificador del asegurado
+      responses:
+        '200':
+          description: Lista de citas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Appointment'
+        '400':
+          description: Parámetro insuredId faltante o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /appointments/{appointmentId}/status:
+    put:
+      summary: Actualizar estado de la cita
+      description: Cambia el estado de una cita existente (pending → completed).
+      operationId: updateAppointmentStatus
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/AppointmentStatus'
+      responses:
+        '200':
+          description: Estado actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Cita no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    AppointmentRequest:
+      type: object
+      required:
+        - insuredId
+        - scheduleId
+        - countryISO
+      properties:
+        insuredId:
+          type: string
+          example: '12345678'
+        scheduleId:
+          type: integer
+          example: 101
+        countryISO:
+          type: string
+          enum: [PE, CL]
+          example: PE
+
+    Appointment:
+      allOf:
+        - $ref: '#/components/schemas/AppointmentRequest'
+        - type: object
+          required:
+            - appointmentId
+            - status
+            - createdAt
+            - updatedAt
+          properties:
+            appointmentId:
+              type: string
+              example: 'uuid-1234-5678'
+            status:
+              $ref: '#/components/schemas/AppointmentStatus'
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    AppointmentStatus:
+      type: string
+      enum: [pending, completed]
+      example: pending
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Invalid insuredId format'

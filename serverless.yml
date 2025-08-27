@@ -1,0 +1,273 @@
+service: appointment-service
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: dev
+  environment:
+    APPOINTMENT_TABLE: ${self:service}-appointments-${sls:stage}
+    SNS_TOPIC_ARN:
+      Ref: AppointmentTopic
+    EVENT_BUS_NAME: default
+    EVENT_SOURCE: custom.appointment
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:GetItem
+        - dynamodb:Query
+      Resource:
+        - Fn::GetAtt: [AppointmentTable, Arn]
+        - Fn::Sub: '${AppointmentTable.Arn}/index/*'
+    - Effect: Allow
+      Action:
+        - sns:Publish
+      Resource:
+        - Ref: AppointmentTopic
+    - Effect: Allow
+      Action:
+        - sqs:ReceiveMessage
+        - sqs:DeleteMessage
+        - sqs:GetQueueAttributes
+        - sqs:ChangeMessageVisibility
+      Resource:
+        - Fn::GetAtt: [SqsPeQueue, Arn]
+        - Fn::GetAtt: [SqsClQueue, Arn]
+        - Fn::GetAtt: [ConfirmationQueue, Arn]
+    - Effect: Allow
+      Action:
+        - events:PutEvents
+      Resource: '*'
+
+functions:
+  createAppointment:
+    handler: src/presentation/appointment.createAppointmentHandler
+    events:
+      - http:
+          path: appointments
+          method: post
+
+  getAppointments:
+    handler: src/presentation/appointment.getAppointmentsByInsuredHandler
+    events:
+      - http:
+          path: appointments-insured
+          method: get
+
+  appointmentPeHandler:
+    handler: src/presentation/appointmentPe.main
+    timeout: 30
+    environment:
+      MYSQL_PE_HOST: appointments-pe.cjuk8se6gg1x.us-east-1.rds.amazonaws.com
+      MYSQL_PE_PORT: '3306'
+      MYSQL_PE_DB: appointments_pe
+      MYSQL_PE_USER: admin
+      MYSQL_PE_PASSWORD: root123456
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt: [SqsPeQueue, Arn]
+
+  appointmentClHandler:
+    handler: src/presentation/appointmentCl.main
+    timeout: 30
+    environment:
+      MYSQL_CL_HOST: appointments-cl.cjuk8se6gg1x.us-east-1.rds.amazonaws.com
+      MYSQL_CL_PORT: '3306'
+      MYSQL_CL_DB: appointments_cl
+      MYSQL_CL_USER: admin
+      MYSQL_CL_PASSWORD: root123456
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt: [SqsClQueue, Arn]
+
+  processSQSConfirmationHandler:
+    handler: src/presentation/appointment.processSQSConfirmationHandler
+    timeout: 30
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt: [ConfirmationQueue, Arn]
+  swaggerDocs:
+    handler: src/presentation/swaggerHandler.swaggerDocs
+    events:
+      - http:
+          path: docs
+          method: get
+
+resources:
+  Resources:
+    # DynamoDB
+    AppointmentTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.APPOINTMENT_TABLE}
+        AttributeDefinitions:
+          - AttributeName: appointmentId
+            AttributeType: S
+          - AttributeName: insuredId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: appointmentId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        GlobalSecondaryIndexes:
+          - IndexName: InsuredIdIndex
+            KeySchema:
+              - AttributeName: insuredId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+
+    # SNS Topic
+    AppointmentTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: appointment-events
+
+    # --- SQS PE ---
+    SqsPeQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: appointment-sqs-pe-${sls:stage}
+
+    # --- SQS CL ---
+    SqsClQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: appointment-sqs-cl-${sls:stage}
+
+    # Permiso SNS → SQS PE
+    SqsPeQueuePolicy:
+      Type: AWS::SQS::QueuePolicy
+      Properties:
+        Queues:
+          - Ref: SqsPeQueue
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: Allow-SNS-SendMessage-PE
+              Effect: Allow
+              Principal:
+                Service: sns.amazonaws.com
+              Action: sqs:SendMessage
+              Resource:
+                Fn::GetAtt: [SqsPeQueue, Arn]
+              Condition:
+                ArnEquals:
+                  aws:SourceArn: { 'Ref': 'AppointmentTopic' }
+
+    # Permiso SNS → SQS CL
+    SqsClQueuePolicy:
+      Type: AWS::SQS::QueuePolicy
+      Properties:
+        Queues:
+          - Ref: SqsClQueue
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: Allow-SNS-SendMessage-CL
+              Effect: Allow
+              Principal:
+                Service: sns.amazonaws.com
+              Action: sqs:SendMessage
+              Resource:
+                Fn::GetAtt: [SqsClQueue, Arn]
+              Condition:
+                ArnEquals:
+                  aws:SourceArn: { 'Ref': 'AppointmentTopic' }
+
+    # SNS → SQS subscripciones
+    SnsToPeSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        TopicArn: { 'Ref': 'AppointmentTopic' }
+        Protocol: sqs
+        Endpoint:
+          Fn::GetAtt: [SqsPeQueue, Arn]
+
+    SnsToClSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        TopicArn: { 'Ref': 'AppointmentTopic' }
+        Protocol: sqs
+        Endpoint:
+          Fn::GetAtt: [SqsClQueue, Arn]
+
+    # --- Confirmaciones ---
+    ConfirmationQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: appointment-confirmations-${sls:stage}
+
+    AppointmentConfirmedRule:
+      Type: AWS::Events::Rule
+      Properties:
+        Name: appointment-confirmed-rule-${sls:stage}
+        EventBusName: ${self:provider.environment.EVENT_BUS_NAME}
+        EventPattern:
+          source:
+            - ${self:provider.environment.EVENT_SOURCE}
+          detail-type:
+            - AppointmentConfirmed
+        Targets:
+          - Id: ConfirmationQueueTarget
+            Arn:
+              Fn::GetAtt: [ConfirmationQueue, Arn]
+
+    ConfirmationQueuePolicy:
+      Type: AWS::SQS::QueuePolicy
+      Properties:
+        Queues:
+          - Ref: ConfirmationQueue
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: Allow-EventBridge-SendMessage
+              Effect: Allow
+              Principal:
+                Service: events.amazonaws.com
+              Action: sqs:SendMessage
+              Resource:
+                Fn::GetAtt: [ConfirmationQueue, Arn]
+              Condition:
+                ArnEquals:
+                  aws:SourceArn:
+                    Fn::GetAtt: [AppointmentConfirmedRule, Arn]
+
+  Outputs:
+    AppointmentTableName:
+      Value: ${self:provider.environment.APPOINTMENT_TABLE}
+    AppointmentTopicArn:
+      Value: { 'Ref': 'AppointmentTopic' }
+    SqsPeQueueArn:
+      Value: { 'Fn::GetAtt': [SqsPeQueue, Arn] }
+    SqsClQueueArn:
+      Value: { 'Fn::GetAtt': [SqsClQueue, Arn] }
+    ConfirmationQueueArn:
+      Value: { 'Fn::GetAtt': [ConfirmationQueue, Arn] }
+
+plugins:
+  - serverless-offline
+  - serverless-aws-documentation
+
+custom:
+  documentation:
+    api:
+      info:
+        version: '1'
+        title: Appointment API
+        description: API para agendamiento de citas
+    models:
+      - name: AppointmentRequest
+        contentType: 'application/json'
+        schema:
+          type: object
+          properties:
+            insuredId: { type: string }
+            scheduleId: { type: integer }
+            countryISO: { type: string }
