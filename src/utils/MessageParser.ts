@@ -9,27 +9,27 @@ export class MessageParser {
 
       return appointmentData;
     } catch (error) {
-      console.error('Error parsing message from SQS:', error);
-      console.error('Raw SQS body:', sqsBody);
-      throw new Error(`Failed to parse appointment message: ${error}`);
+      console.error('Error al parsear el mensaje desde SQS:', error);
+      console.error('Contenido crudo de SQS:', sqsBody);
+      throw new Error(`No se pudo parsear el mensaje de cita: ${error}`);
     }
   }
 
   static validateAppointmentMessage(data: any): AppointmentSQSMessage {
     if (!data.appointmentId || typeof data.appointmentId !== 'string') {
-      throw new Error('Invalid appointmentId in message');
+      throw new Error('El campo appointmentId es inválido o no está presente en el mensaje');
     }
 
     if (!data.insuredId || typeof data.insuredId !== 'string') {
-      throw new Error('Invalid insuredId in message');
+      throw new Error('El campo insuredId es inválido o no está presente en el mensaje');
     }
 
     if (!data.scheduleId || typeof data.scheduleId !== 'number') {
-      throw new Error('Invalid scheduleId in message');
+      throw new Error('El campo scheduleId es inválido o no está presente en el mensaje');
     }
 
     if (!data.countryISO || !['PE', 'CL'].includes(data.countryISO)) {
-      throw new Error('Invalid countryISO in message');
+      throw new Error('El campo countryISO es inválido, debe ser "PE" o "CL"');
     }
 
     return data as AppointmentSQSMessage;
