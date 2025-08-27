@@ -8,3 +8,6 @@ localstack
 mysqldata
 undefined
 tmp
+git
+.husky
+npx
