@@ -4,7 +4,6 @@ import { NotificationService } from '../src/domain/services/NotificationService'
 import { ValidationService } from '../src/domain/services/ValidationService';
 import { AppointmentRequest, CountryISO } from '../src/domain/Appointment';
 
-// Mocks
 const mockRepository: jest.Mocked<AppointmentRepository> = {
   save: jest.fn(),
   findById: jest.fn(),
@@ -38,7 +37,7 @@ describe('CreateAppointmentUseCase', () => {
 
   it('crea una cita válida y la guarda', async () => {
     const request: AppointmentRequest = {
-      insuredId: '12345678', // válido
+      insuredId: '12345',
       scheduleId: 1,
       countryISO: CountryISO.PE,
     };
@@ -57,7 +56,7 @@ describe('CreateAppointmentUseCase', () => {
 
   it('lanza error si insuredId es inválido', async () => {
     const request: AppointmentRequest = {
-      insuredId: '', // inválido
+      insuredId: '',
       scheduleId: 1,
       countryISO: CountryISO.PE,
     };

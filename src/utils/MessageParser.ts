@@ -3,10 +3,8 @@ import { SNSMessageWrapper, AppointmentSQSMessage } from '../infra/types/LambdaT
 export class MessageParser {
   static parseAppointmentFromSQS(sqsBody: string): AppointmentSQSMessage {
     try {
-      // First parse the SQS body (contains SNS message)
       const snsMessage: SNSMessageWrapper = JSON.parse(sqsBody);
 
-      // Then parse the actual message content
       const appointmentData: AppointmentSQSMessage = JSON.parse(snsMessage.Message);
 
       return appointmentData;

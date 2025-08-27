@@ -5,10 +5,8 @@ import * as yaml from 'js-yaml';
 
 export const swaggerDocs: APIGatewayProxyHandler = async () => {
   try {
-    // 📌 Resolver el swagger.yml desde la raíz
     const filePath = path.resolve(process.cwd(), 'swagger.yml');
 
-    // Leer YAML
     const swaggerYaml = fs.readFileSync(filePath, 'utf8');
     const swaggerJson = yaml.load(swaggerYaml);
 

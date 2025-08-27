@@ -48,7 +48,6 @@ export const main = async (event: any) => {
 
         console.log(' Cita insertada correctamente:', { insuredId, scheduleId, countryISO });
 
-        // ---- Nuevo: enviar confirmación al EventBridge ----
         await eb.send(
           new PutEventsCommand({
             Entries: [
