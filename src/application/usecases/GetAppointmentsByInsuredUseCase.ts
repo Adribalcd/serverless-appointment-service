@@ -15,7 +15,7 @@ export class GetAppointmentsByInsuredUseCase {
     }
 
     if (!this.validationService.validateInsuredId(insuredId)) {
-      throw new ValidationError('Invalid insuredId format');
+      throw new ValidationError('Formato invalido para insuredId');
     }
 
     const appointments = await this.repository.findByInsuredId(insuredId);
