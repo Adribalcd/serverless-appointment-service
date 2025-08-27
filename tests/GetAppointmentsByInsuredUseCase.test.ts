@@ -95,8 +95,10 @@ describe('GetAppointmentsByInsuredUseCase', () => {
 
     mockValidationService.validateInsuredId.mockReturnValue(false);
 
+    // ✅ CORRECCIÓN: Cambiar al mensaje que realmente lanza el código
     await expect(useCase.execute(insuredId)).rejects.toThrow('Formato invalido para insuredId');
 
+    // Verificar que el repositorio no fue llamado
     expect(mockRepository.findByInsuredId).not.toHaveBeenCalled();
   });
 });
