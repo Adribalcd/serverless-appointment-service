@@ -1,7 +1,5 @@
 import { GetAppointmentsByInsuredUseCase } from '../src/application/usecases/GetAppointmentsByInsuredUseCase';
 import { Appointment, AppointmentStatus, CountryISO } from '../src/domain/Appointment';
-import { AppointmentRepository } from '../src/domain/repositories/AppointmentRepository';
-import { ValidationService } from '../src/domain/services/ValidationService';
 
 describe('GetAppointmentsByInsuredUseCase', () => {
   let useCase: GetAppointmentsByInsuredUseCase;
@@ -67,7 +65,6 @@ describe('GetAppointmentsByInsuredUseCase', () => {
     const dto = { insuredId: 'ABC' };
     mockValidationService.validateInsuredId.mockReturnValue(false);
 
-    // ✅ ACTUALIZADO: Usar el mensaje centralizado
     await expect(useCase.execute(dto)).rejects.toThrow(
       'El ID del asegurado debe tener exactamente 5 dígitos numéricos'
     );
@@ -100,7 +97,6 @@ describe('GetAppointmentsByInsuredUseCase', () => {
 
     mockValidationService.validateInsuredId.mockReturnValue(false);
 
-    // ✅ ACTUALIZADO: Usar el mensaje centralizado
     await expect(useCase.execute(dto)).rejects.toThrow(
       'El ID del asegurado debe tener exactamente 5 dígitos numéricos'
     );

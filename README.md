@@ -1,6 +1,6 @@
 # Serverless Appointment Service
 
-Un servicio serverless de agendamiento de citas médicas para asegurados que opera tanto en Perú como Chile, construido con AWS Lambda, DynamoDB, SNS, SQS, EventBridge y RDS.
+Servicio serverless para agendamiento de citas médicas para asegurados que opera tanto en Perú como Chile, construido con AWS Lambda, DynamoDB, SNS, SQS, EventBridge y RDS.
 
 ## Author:
 
@@ -237,9 +237,9 @@ El despliegue crea automáticamente:
 - **API Gateway REST API**
 - **IAM Roles y Policies** mínimas necesarias
 
-## Flujo de CI/CD (Opcional)
+## Flujo de CI/CD
 
-Si tu repo tiene GitHub Actions configurado (`.github/workflows/ci.yml`), cada push puede desplegar automáticamente:
+GitHub Actions configurado (`.github/workflows/ci.yml`), cada push desplega automáticamente:
 
 - `dev` → Ambiente de desarrollo
 - `main` → Ambiente de producción

@@ -64,7 +64,6 @@ describe('CreateAppointmentUseCase', () => {
     };
 
     mockValidationService.validateInsuredId.mockReturnValue(false);
-    // ✅ ACTUALIZADO: Usar el mensaje centralizado
     await expect(useCase.execute(dto)).rejects.toThrow(
       'El ID del asegurado debe tener exactamente 5 dígitos numéricos'
     );
@@ -80,7 +79,6 @@ describe('CreateAppointmentUseCase', () => {
     mockValidationService.validateInsuredId.mockReturnValue(true);
     mockValidationService.validateCountryISO.mockReturnValue(false);
 
-    // ✅ ACTUALIZADO: Usar el mensaje centralizado
     await expect(useCase.execute(dto)).rejects.toThrow(
       'El código de país debe ser PE (Perú) o CL (Chile)'
     );
@@ -96,7 +94,6 @@ describe('CreateAppointmentUseCase', () => {
     mockValidationService.validateInsuredId.mockReturnValue(true);
     mockValidationService.validateCountryISO.mockReturnValue(true);
 
-    // ✅ ACTUALIZADO: Usar el mensaje centralizado
     await expect(useCase.execute(dto)).rejects.toThrow(
       'El ID del horario debe ser un número positivo mayor a cero'
     );
@@ -113,7 +110,6 @@ describe('CreateAppointmentUseCase', () => {
     mockValidationService.validateCountryISO.mockReturnValue(true);
     mockValidationService.validateAppointmentRequest.mockResolvedValue(false);
 
-    // ✅ ACTUALIZADO: Usar el mensaje centralizado
     await expect(useCase.execute(dto)).rejects.toThrow(
       'Los datos proporcionados no cumplen con los requisitos del sistema'
     );
