@@ -239,7 +239,7 @@ El despliegue crea automáticamente:
 
 ## Flujo de CI/CD
 
- GitHub Actions configurado (`.github/workflows/ci.yml`), cada push desplega automáticamente:
+GitHub Actions configurado (`.github/workflows/ci.yml`), cada push desplega automáticamente:
 
 - `dev` → Ambiente de desarrollo
 - `main` → Ambiente de producción
