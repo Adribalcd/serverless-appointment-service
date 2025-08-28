@@ -1,37 +1,33 @@
 import { SNSMessageWrapper, AppointmentSQSMessage } from '../infra/types/LambdaTypes';
+import { AppointmentSQSMessageSchema } from '../domain/validation/AppointmentSchemas';
 
 export class MessageParser {
   static parseAppointmentFromSQS(sqsBody: string): AppointmentSQSMessage {
     try {
       const snsMessage: SNSMessageWrapper = JSON.parse(sqsBody);
+      const appointmentData = JSON.parse(snsMessage.Message);
 
-      const appointmentData: AppointmentSQSMessage = JSON.parse(snsMessage.Message);
+      const { error, value } = AppointmentSQSMessageSchema.validate(appointmentData);
 
-      return appointmentData;
+      if (error) {
+        throw new Error(`Mensaje de cita inválido: ${error.details[0].message}`);
+      }
+
+      return value as AppointmentSQSMessage;
     } catch (error) {
-      console.error('Error al parsear el mensaje desde SQS:', error);
-      console.error('Contenido crudo de SQS:', sqsBody);
-      throw new Error(`No se pudo parsear el mensaje de cita: ${error}`);
+      console.error('Error parseando mensaje desde SQS:', error);
+      console.error('Cuerpo SQS sin procesar:', sqsBody);
+      throw new Error(`Falló al parsear mensaje de cita: ${error}`);
     }
   }
 
   static validateAppointmentMessage(data: any): AppointmentSQSMessage {
-    if (!data.appointmentId || typeof data.appointmentId !== 'string') {
-      throw new Error('El campo appointmentId es inválido o no está presente en el mensaje');
+    const { error, value } = AppointmentSQSMessageSchema.validate(data);
+
+    if (error) {
+      throw new Error(`Validación falló: ${error.details[0].message}`);
     }
 
-    if (!data.insuredId || typeof data.insuredId !== 'string') {
-      throw new Error('El campo insuredId es inválido o no está presente en el mensaje');
-    }
-
-    if (!data.scheduleId || typeof data.scheduleId !== 'number') {
-      throw new Error('El campo scheduleId es inválido o no está presente en el mensaje');
-    }
-
-    if (!data.countryISO || !['PE', 'CL'].includes(data.countryISO)) {
-      throw new Error('El campo countryISO es inválido, debe ser "PE" o "CL"');
-    }
-
-    return data as AppointmentSQSMessage;
+    return value;
   }
 }
