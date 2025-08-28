@@ -241,8 +241,8 @@ El despliegue crea automáticamente:
 
 GitHub Actions configurado (`.github/workflows/ci.yml`), cada push desplega automáticamente:
 
-- `dev` → Ambiente de desarrollo
-- `main` → Ambiente de producción
+- `dev` -> Ambiente de desarrollo
+- `main` -> Ambiente de producción
 
 ## Verificación del Despliegue
 
@@ -391,7 +391,7 @@ npm install
 
 ### Fan-Out/Fan-In
 
-- **Implementación**: SNS → múltiples colas SQS
+- **Implementación**: SNS -> múltiples colas SQS
 - **Ubicación**: `serverless.yml` (líneas 184-199)
 - **Descripción**: Distribución de eventos a procesadores por país
 
