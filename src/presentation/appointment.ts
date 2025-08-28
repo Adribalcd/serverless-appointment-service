@@ -23,43 +23,80 @@ export const createAppointment = new CreateAppointmentUseCase(
   notificationService,
   validationService
 );
+
 export const getAppointmentsByInsured = new GetAppointmentsByInsuredUseCase(
   appointmentRepository,
   validationService
 );
 
 export const createAppointmentHandler: APIGatewayProxyHandlerV2 = async (event) => {
-  if (!event.body) {
+  try {
+    if (!event.body) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          error: 'Datos faltantes',
+          message: 'El cuerpo de la solicitud es requerido',
+          field: 'body',
+        }),
+      };
+    }
+
+    const data = JSON.parse(event.body);
+    const result = await createAppointment.execute(data);
+
+    return {
+      statusCode: 201,
+      body: JSON.stringify(result),
+    };
+  } catch (error: any) {
+    console.error('Error en createAppointmentHandler:', error);
+
+    const errorMessage = error.message?.trim() || '';
+
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'Request body is required' }),
+      body: JSON.stringify({
+        error: errorMessage,
+        type: 'VALIDATION_ERROR',
+      }),
     };
   }
-
-  const data = JSON.parse(event.body);
-  const result = await createAppointment.execute(data);
-
-  return {
-    statusCode: 201,
-    body: JSON.stringify(result),
-  };
 };
 
 export const getAppointmentsByInsuredHandler: APIGatewayProxyHandlerV2 = async (event) => {
-  const insuredId = event.queryStringParameters?.insuredId;
-  if (!insuredId) {
+  try {
+    const insuredId = event.queryStringParameters?.insuredId;
+    if (!insuredId) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          error: 'Datos faltantes',
+          message: 'El parámetro insuredId es requerido',
+          field: 'insuredId',
+        }),
+      };
+    }
+
+    const result = await getAppointmentsByInsured.execute({ insuredId });
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify(result),
+    };
+  } catch (error: any) {
+    console.error('Error en getAppointmentsByInsuredHandler:', error);
+
+    const errorMessage = error.message?.trim() || '';
+
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'insuredId es requerido' }),
+      body: JSON.stringify({
+        error: errorMessage,
+        type: 'VALIDATION_ERROR',
+      }),
     };
   }
-
-  const result = await getAppointmentsByInsured.execute(insuredId);
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify(result),
-  };
 };
 
 export const processSQSConfirmationHandler = async (event: any) => {
@@ -68,13 +105,10 @@ export const processSQSConfirmationHandler = async (event: any) => {
   try {
     for (const record of event.Records) {
       const eventBridgeMessage = JSON.parse(record.body);
-
       const appointmentData = eventBridgeMessage.detail;
 
       console.log('Datos de cita a confirmar:', appointmentData);
-
       await confirmAppointmentUseCase.execute(appointmentData.appointmentId);
-
       console.log('Cita confirmada:', appointmentData.appointmentId);
     }
 

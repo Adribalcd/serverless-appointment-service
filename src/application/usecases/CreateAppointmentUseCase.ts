@@ -1,14 +1,20 @@
-import {
-  Appointment,
-  AppointmentRequest,
-  AppointmentStatus,
-  CountryISO,
-} from '../../domain/Appointment';
+import { Appointment, AppointmentStatus, CountryISO } from '../../domain/Appointment';
 import { AppointmentRepository } from '../../domain/repositories/AppointmentRepository';
 import { NotificationService } from '../../domain/services/NotificationService';
 import { ValidationService } from '../../domain/services/ValidationService';
 import { ValidationError } from '../../domain/errors/DomainError';
 import { v4 as uuidv4 } from 'uuid';
+
+export type CreateAppointmentDto = {
+  insuredId: string;
+  scheduleId: number;
+  countryISO: CountryISO;
+};
+
+export type CreateAppointmentResult = {
+  appointmentId: string;
+  message: string;
+};
 
 export class CreateAppointmentUseCase {
   constructor(
@@ -17,14 +23,14 @@ export class CreateAppointmentUseCase {
     private validationService: ValidationService
   ) {}
 
-  async execute(request: AppointmentRequest): Promise<{ appointmentId: string; message: string }> {
-    await this.validateRequest(request);
+  async execute(dto: CreateAppointmentDto): Promise<CreateAppointmentResult> {
+    await this.validateRequest(dto);
 
     const appointment: Appointment = {
       appointmentId: uuidv4(),
-      insuredId: request.insuredId,
-      scheduleId: request.scheduleId,
-      countryISO: request.countryISO,
+      insuredId: dto.insuredId,
+      scheduleId: dto.scheduleId,
+      countryISO: dto.countryISO as CountryISO,
       status: AppointmentStatus.PENDING,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -45,22 +51,22 @@ export class CreateAppointmentUseCase {
     };
   }
 
-  private async validateRequest(request: AppointmentRequest): Promise<void> {
-    if (!this.validationService.validateInsuredId(request.insuredId)) {
-      throw new ValidationError('Invalid insuredId format');
+  private async validateRequest(dto: CreateAppointmentDto): Promise<void> {
+    if (!this.validationService.validateInsuredId(dto.insuredId)) {
+      throw new ValidationError('Formato invalido para insuredId');
     }
 
-    if (!this.validationService.validateCountryISO(request.countryISO)) {
-      throw new ValidationError('Invalid countryISO. Must be PE or CL');
+    if (!this.validationService.validateCountryISO(dto.countryISO)) {
+      throw new ValidationError('countryISO debe ser PE o CL');
     }
 
-    if (!request.scheduleId || request.scheduleId <= 0) {
-      throw new ValidationError('Invalid scheduleId');
+    if (!dto.scheduleId || dto.scheduleId <= 0) {
+      throw new ValidationError('scheduleId es invalido');
     }
 
-    const isValid = await this.validationService.validateAppointmentRequest(request);
+    const isValid = await this.validationService.validateAppointmentRequest(dto);
     if (!isValid) {
-      throw new ValidationError('Invalid appointment request');
+      throw new ValidationError('invalida solicitud');
     }
   }
 }
