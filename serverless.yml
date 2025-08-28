@@ -141,7 +141,7 @@ resources:
       Properties:
         QueueName: appointment-sqs-cl-${sls:stage}
 
-    # Permiso SNS → SQS PE
+    # Permiso SNS -> SQS PE
     SqsPeQueuePolicy:
       Type: AWS::SQS::QueuePolicy
       Properties:
@@ -161,7 +161,7 @@ resources:
                 ArnEquals:
                   aws:SourceArn: { 'Ref': 'AppointmentTopic' }
 
-    # Permiso SNS → SQS CL
+    # Permiso SNS -> SQS CL
     SqsClQueuePolicy:
       Type: AWS::SQS::QueuePolicy
       Properties:
@@ -181,7 +181,7 @@ resources:
                 ArnEquals:
                   aws:SourceArn: { 'Ref': 'AppointmentTopic' }
 
-    # SNS → SQS subscripciones
+    # SNS -> SQS subscripciones
     SnsToPeSubscription:
       Type: AWS::SNS::Subscription
       Properties:
