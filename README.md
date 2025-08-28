@@ -241,8 +241,8 @@ El despliegue crea automáticamente:
 
 GitHub Actions configurado (`.github/workflows/ci.yml`), cada push desplega automáticamente:
 
-- `dev` → Ambiente de desarrollo
-- `main` → Ambiente de producción
+- `dev` -> Ambiente de desarrollo
+- `main` -> Ambiente de producción
 
 ## Verificación del Despliegue
 
@@ -370,3 +370,71 @@ export AWS_SECRET_ACCESS_KEY=your-secret
 rm -rf node_modules package-lock.json
 npm install
 ```
+
+# Algunos Patrones de Diseño Implementados
+
+## Patrones Arquitectónicos
+
+### Event-Driven Architecture
+
+- **Implementación**: SNS + SQS + EventBridge
+- **Ubicación**: `serverless.yml` (líneas 126-241)
+- **Descripción**: Procesamiento asíncrono de citas mediante eventos
+
+### Microservices Pattern
+
+- **Implementación**: Funciones Lambda independientes
+- **Ubicación**: `serverless.yml` (líneas 45-101)
+- **Descripción**: Servicios separados para creación, consulta y procesamiento
+
+## Patrones de Control de Flujo
+
+### Fan-Out/Fan-In
+
+- **Implementación**: SNS -> múltiples colas SQS
+- **Ubicación**: `serverless.yml` (líneas 184-199)
+- **Descripción**: Distribución de eventos a procesadores por país
+
+## Patrones de Integración
+
+### Message Queue Pattern
+
+- **Implementación**: SQS queues por país
+- **Ubicación**: `serverless.yml` (líneas 133-142)
+- **Descripción**: Colas dedicadas para PE y CL
+
+### API Gateway Pattern
+
+- **Implementación**: AWS API Gateway
+- **Ubicación**: `docs/swagger.yml`
+- **Descripción**: Punto de entrada único para operaciones REST
+
+### Database per Service
+
+- **Implementación**: MySQL separado por país
+- **Ubicación**: `serverless.yml` (líneas 64-82)
+- **Descripción**: Base de datos independiente para PE y CL
+
+## Patrones de Implementacion
+
+### Strategy Pattern
+
+- **Implementación**: Múltiples estrategias intercambiables
+- **Ubicaciones**:
+  - `src/infra/ValidationService.ts` - Estrategias de validación
+  - `src/infra/services/SNSNotificationService.ts` - Estrategias de notificación
+  - `src/infra/repositories/` - Estrategias de persistencia (DynamoDB/MySQL)
+  - `src/infra/events/EventBridgePublisher.ts` - Estrategia de eventos
+- **Descripción**: Algoritmos intercambiables para validación, notificación y persistencia
+
+## Patrones de Datos
+
+### DTO
+
+- **Implementación**: Objetos especializados para transferencia de datos
+- **Ubicaciones**:
+  - `src/domain/Appointment.ts` - DTOs del dominio
+  - `src/infra/types/LambdaTypes.ts` - DTOs de infraestructura
+  - `docs/swagger.yml` - DTOs de API
+- **Descripción**: Encapsula datos para transferencia entre capas y servicios
+- **Ejemplos**: `AppointmentRequest`, `AppointmentSQSMessage`, `SNSMessageWrapper`
