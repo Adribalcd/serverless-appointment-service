@@ -11,7 +11,6 @@ describe('CreateAppointmentUseCase', () => {
   let mockValidationService: any;
 
   beforeEach(() => {
-    // ✅ SOLUCIÓN: Usar 'any' para evitar problemas de tipado
     mockRepository = {
       save: jest.fn().mockResolvedValue(undefined),
       findById: jest.fn(),
@@ -65,7 +64,10 @@ describe('CreateAppointmentUseCase', () => {
     };
 
     mockValidationService.validateInsuredId.mockReturnValue(false);
-    await expect(useCase.execute(dto)).rejects.toThrow('Formato invalido para insuredId');
+    // ✅ ACTUALIZADO: Usar el mensaje centralizado
+    await expect(useCase.execute(dto)).rejects.toThrow(
+      'El ID del asegurado debe tener exactamente 5 dígitos numéricos'
+    );
   });
 
   it('lanza error si countryISO es inválido', async () => {
@@ -78,7 +80,10 @@ describe('CreateAppointmentUseCase', () => {
     mockValidationService.validateInsuredId.mockReturnValue(true);
     mockValidationService.validateCountryISO.mockReturnValue(false);
 
-    await expect(useCase.execute(dto)).rejects.toThrow('countryISO debe ser PE o CL');
+    // ✅ ACTUALIZADO: Usar el mensaje centralizado
+    await expect(useCase.execute(dto)).rejects.toThrow(
+      'El código de país debe ser PE (Perú) o CL (Chile)'
+    );
   });
 
   it('lanza error si scheduleId es inválido', async () => {
@@ -91,7 +96,10 @@ describe('CreateAppointmentUseCase', () => {
     mockValidationService.validateInsuredId.mockReturnValue(true);
     mockValidationService.validateCountryISO.mockReturnValue(true);
 
-    await expect(useCase.execute(dto)).rejects.toThrow('scheduleId es invalido');
+    // ✅ ACTUALIZADO: Usar el mensaje centralizado
+    await expect(useCase.execute(dto)).rejects.toThrow(
+      'El ID del horario debe ser un número positivo mayor a cero'
+    );
   });
 
   it('lanza error si validateAppointmentRequest falla', async () => {
@@ -105,7 +113,10 @@ describe('CreateAppointmentUseCase', () => {
     mockValidationService.validateCountryISO.mockReturnValue(true);
     mockValidationService.validateAppointmentRequest.mockResolvedValue(false);
 
-    await expect(useCase.execute(dto)).rejects.toThrow('invalida solicitud');
+    // ✅ ACTUALIZADO: Usar el mensaje centralizado
+    await expect(useCase.execute(dto)).rejects.toThrow(
+      'Los datos proporcionados no cumplen con los requisitos del sistema'
+    );
   });
 
   it('verifica que se llamen todos los métodos en el orden correcto', async () => {

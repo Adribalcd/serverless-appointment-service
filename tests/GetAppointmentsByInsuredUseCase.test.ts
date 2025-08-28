@@ -4,9 +4,9 @@ import { AppointmentRepository } from '../src/domain/repositories/AppointmentRep
 import { ValidationService } from '../src/domain/services/ValidationService';
 
 describe('GetAppointmentsByInsuredUseCase', () => {
-  let mockRepository: jest.Mocked<AppointmentRepository>;
-  let mockValidationService: jest.Mocked<ValidationService>;
   let useCase: GetAppointmentsByInsuredUseCase;
+  let mockRepository: any;
+  let mockValidationService: any;
 
   beforeEach(() => {
     mockRepository = {
@@ -14,13 +14,13 @@ describe('GetAppointmentsByInsuredUseCase', () => {
       updateStatus: jest.fn(),
       findById: jest.fn(),
       findByInsuredId: jest.fn(),
-    } as unknown as jest.Mocked<AppointmentRepository>;
+    };
 
     mockValidationService = {
       validateInsuredId: jest.fn(),
       validateCountryISO: jest.fn(),
       validateAppointmentRequest: jest.fn(),
-    } as unknown as jest.Mocked<ValidationService>;
+    };
 
     useCase = new GetAppointmentsByInsuredUseCase(mockRepository, mockValidationService);
   });
@@ -67,7 +67,10 @@ describe('GetAppointmentsByInsuredUseCase', () => {
     const dto = { insuredId: 'ABC' };
     mockValidationService.validateInsuredId.mockReturnValue(false);
 
-    await expect(useCase.execute(dto)).rejects.toThrow('Formato invalido para insuredId');
+    // ✅ ACTUALIZADO: Usar el mensaje centralizado
+    await expect(useCase.execute(dto)).rejects.toThrow(
+      'El ID del asegurado debe tener exactamente 5 dígitos numéricos'
+    );
   });
 
   it('debería devolver lista vacía si no hay citas', async () => {
@@ -97,7 +100,10 @@ describe('GetAppointmentsByInsuredUseCase', () => {
 
     mockValidationService.validateInsuredId.mockReturnValue(false);
 
-    await expect(useCase.execute(dto)).rejects.toThrow('Formato invalido para insuredId');
+    // ✅ ACTUALIZADO: Usar el mensaje centralizado
+    await expect(useCase.execute(dto)).rejects.toThrow(
+      'El ID del asegurado debe tener exactamente 5 dígitos numéricos'
+    );
 
     expect(mockRepository.findByInsuredId).not.toHaveBeenCalled();
   });

@@ -1,10 +1,39 @@
 openapi: 3.0.1
 info:
   title: Appointment Service API
-  description: API para gestionar citas médicas usando Serverless, DynamoDB, SNS, SQS y RDS.
+  description: |
+    API serverless para gestionar citas medicas con procesamiento multi-pais.  
+      
+    **Arquitectura:**  
+    - AWS Lambda + API Gateway para endpoints REST  
+    - DynamoDB para almacenamiento principal  
+    - SNS/SQS para procesamiento asincrono por pais (PE/CL)  
+    - EventBridge para confirmaciones  
+    - MySQL para datos especificos por pais  
+      
+    **Flujo de procesamiento:**  
+    1. Cliente crea cita → almacenada en DynamoDB (PENDING)  
+    2. Evento publicado a SNS → distribuido a colas SQS por pais  
+    3. Procesadores especificos por pais → almacenan en MySQL  
+    4. Confirmacion via EventBridge → actualiza estado a COMPLETED
   version: '1.0.0'
+  contact:
+    name: Adriana Balceda
+    email: adriana.balceda@example.com
+  license:
+    name: ISC
 servers:
   - url: https://{apiId}.execute-api.{region}.amazonaws.com/dev
+    description: Entorno de desarrollo
+    variables:
+      apiId:
+        default: 7000oxlp55
+        description: ID del API Gateway
+      region:
+        default: us-east-1
+        description: Region AWS
+  - url: https://{apiId}.execute-api.{region}.amazonaws.com/prod
+    description: Entorno de produccion
     variables:
       apiId:
         default: 7000oxlp55
@@ -14,60 +43,184 @@ servers:
 paths:
   /appointments:
     post:
-      summary: Crear una cita
-      description: Crea una cita nueva y la envía a SNS/SQS para su procesamiento.
+      summary: Crear una cita medica
+      description: |
+        Crea una nueva cita medica y la envia al sistema de procesamiento asincrono.  
+          
+        **Flujo:**  
+        1. Valida datos de entrada (insuredId, scheduleId, countryISO)  
+        2. Almacena cita en DynamoDB con estado PENDING  
+        3. Publica evento a SNS para procesamiento por pais  
+        4. Retorna ID de cita y mensaje de confirmacion  
+          
+        **Procesamiento asincrono:**  
+        - PE: Cola SQS → Lambda → MySQL appointments_pe  
+        - CL: Cola SQS → Lambda → MySQL appointments_cl
       operationId: createAppointment
+      tags:
+        - Appointments
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/AppointmentRequest'
+            examples:
+              peru_example:
+                summary: Cita para Peru
+                value:
+                  insuredId: '12345'
+                  scheduleId: 101
+                  countryISO: 'PE'
+              chile_example:
+                summary: Cita para Chile
+                value:
+                  insuredId: '67890'
+                  scheduleId: 202
+                  countryISO: 'CL'
       responses:
         '201':
           description: Cita creada exitosamente
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  appointmentId:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/CreateAppointmentResponse'
+              examples:
+                success_response:
+                  summary: Respuesta exitosa
+                  value:
+                    appointmentId: '550e8400-e29b-41d4-a716-446655440000'
+                    message: 'El agendamiento esta en proceso'
         '400':
-          description: Datos inválidos
+          description: Error de validacion en los datos de entrada
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                invalid_insured_id:
+                  summary: ID de asegurado invalido
+                  value:
+                    error: 'El ID del asegurado debe tener exactamente 5 digitos numericos'
+                    type: 'VALIDATION_ERROR'
+                invalid_country:
+                  summary: Pais no soportado
+                  value:
+                    error: 'El codigo de pais debe ser PE (Peru) o CL (Chile)'
+                    type: 'VALIDATION_ERROR'
+                invalid_schedule:
+                  summary: ID de horario invalido
+                  value:
+                    error: 'El ID del horario debe ser un numero positivo mayor a cero'
+                    type: 'VALIDATION_ERROR'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalError'
 
     get:
-      summary: Listar citas por asegurado
-      description: Retorna todas las citas asociadas a un insuredId.
+      summary: Obtener citas por asegurado
+      description: |
+        Retorna todas las citas asociadas a un ID de asegurado especifico.  
+          
+        **Fuente de datos:** DynamoDB con indice secundario global (InsuredIdIndex)  
+          
+        **Estados posibles:**  
+        - `pending`: Cita creada, en proceso de confirmacion  
+        - `completed`: Cita procesada y confirmada por el sistema
       operationId: getAppointmentsByInsured
+      tags:
+        - Appointments
       parameters:
         - name: insuredId
           in: query
           required: true
           schema:
             type: string
-          description: Identificador del asegurado
+            pattern: '^[0-9]{5}$'
+            example: '12345'
+          description: |
+            Identificador unico del asegurado.  
+            Debe ser exactamente 5 digitos numericos.
       responses:
         '200':
-          description: Lista de citas
+          description: Lista de citas del asegurado
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Appointment'
+              examples:
+                with_appointments:
+                  summary: Asegurado con citas
+                  value:
+                    - appointmentId: '550e8400-e29b-41d4-a716-446655440000'
+                      insuredId: '12345'
+                      scheduleId: 101
+                      countryISO: 'PE'
+                      status: 'completed'
+                      createdAt: '2024-01-15T10:30:00.000Z'
+                      updatedAt: '2024-01-15T10:35:00.000Z'
+                    - appointmentId: '550e8400-e29b-41d4-a716-446655440001'
+                      insuredId: '12345'
+                      scheduleId: 102
+                      countryISO: 'PE'
+                      status: 'pending'
+                      createdAt: '2024-01-16T14:20:00.000Z'
+                      updatedAt: '2024-01-16T14:20:00.000Z'
+                empty_list:
+                  summary: Asegurado sin citas
+                  value: []
         '400':
-          description: Parámetro insuredId faltante o inválido
+          description: Error de validacion en parametros
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                missing_insured_id:
+                  summary: Parametro faltante
+                  value:
+                    error: 'El parametro insuredId es requerido'
+                    type: 'VALIDATION_ERROR'
+                invalid_format:
+                  summary: Formato invalido
+                  value:
+                    error: 'El ID del asegurado debe tener exactamente 5 digitos numericos'
+                    type: 'VALIDATION_ERROR'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalError'
+
+  /docs:
+    get:
+      summary: Documentacion interactiva de la API
+      description: |
+        Endpoint que sirve la documentacion Swagger UI interactiva.  
+        Permite explorar y probar todos los endpoints de la API.
+      operationId: getApiDocumentation
+      tags:
+        - Documentation
+      responses:
+        '200':
+          description: Pagina HTML con Swagger UI
+          content:
+            text/html:
+              schema:
+                type: string
+                example: '<!DOCTYPE html><html>...</html>'
+        '500':
+          description: Error al generar documentacion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalError'
 
 components:
   schemas:
@@ -80,14 +233,23 @@ components:
       properties:
         insuredId:
           type: string
-          example: '12345678'
+          pattern: '^[0-9]{5}$'
+          description: Identificador unico del asegurado (5 digitos)
+          example: '12345'
         scheduleId:
           type: integer
+          minimum: 1
+          description: Identificador del horario de la cita
           example: 101
         countryISO:
           type: string
           enum: [PE, CL]
+          description: |
+            Codigo ISO del pais donde se procesa la cita:  
+            - PE: Peru  
+            - CL: Chile
           example: PE
+      additionalProperties: false
 
     Appointment:
       allOf:
@@ -101,24 +263,108 @@ components:
           properties:
             appointmentId:
               type: string
-              example: 'uuid-1234-5678'
+              format: uuid
+              description: Identificador unico de la cita (UUID v4)
+              example: '550e8400-e29b-41d4-a716-446655440000'
             status:
               $ref: '#/components/schemas/AppointmentStatus'
             createdAt:
               type: string
               format: date-time
+              description: Timestamp de creacion de la cita
+              example: '2024-01-15T10:30:00.000Z'
             updatedAt:
               type: string
               format: date-time
+              description: Timestamp de ultima actualizacion
+              example: '2024-01-15T10:35:00.000Z'
 
     AppointmentStatus:
       type: string
       enum: [pending, completed]
+      description: |
+        Estado actual de la cita:  
+        - `pending`: Cita creada, pendiente de procesamiento  
+        - `completed`: Cita procesada y confirmada
       example: pending
 
-    Error:
+    CreateAppointmentResponse:
       type: object
+      required:
+        - appointmentId
+        - message
       properties:
+        appointmentId:
+          type: string
+          format: uuid
+          description: ID unico de la cita creada
+          example: '550e8400-e29b-41d4-a716-446655440000'
         message:
           type: string
-          example: 'Invalid insuredId format'
+          description: Mensaje de confirmacion
+          example: 'El agendamiento esta en proceso'
+      additionalProperties: false
+
+    ValidationError:
+      type: object
+      required:
+        - error
+        - type
+      properties:
+        error:
+          type: string
+          description: Mensaje descriptivo del error de validacion
+          example: 'El ID del asegurado debe tener exactamente 5 digitos numericos'
+        type:
+          type: string
+          enum: [VALIDATION_ERROR]
+          description: Tipo de error para manejo programatico
+          example: 'VALIDATION_ERROR'
+        field:
+          type: string
+          description: Campo especifico que causo el error (opcional)
+          example: 'insuredId'
+      additionalProperties: false
+
+    InternalError:
+      type: object
+      required:
+        - error
+        - message
+        - type
+      properties:
+        error:
+          type: string
+          description: Tipo de error
+          example: 'Error interno'
+        message:
+          type: string
+          description: Mensaje descriptivo del error
+          example: 'Ha ocurrido un error inesperado en el servidor. Por favor, intentelo nuevamente.'
+        type:
+          type: string
+          enum: [INTERNAL_ERROR]
+          description: Tipo de error para manejo programatico
+          example: 'INTERNAL_ERROR'
+      additionalProperties: false
+
+  parameters:
+    InsuredIdParam:
+      name: insuredId
+      in: query
+      required: true
+      schema:
+        type: string
+        pattern: '^[0-9]{5}$'
+      description: Identificador del asegurado (5 digitos numericos)
+      example: '12345'
+
+tags:
+  - name: Appointments
+    description: Operaciones para gestion de citas medicas
+  - name: Documentation
+    description: Documentacion y recursos de la API
+
+externalDocs:
+  description: Repositorio del proyecto en GitHub
+  url: https://github.com/Adribalcd/serverless-appointment-service

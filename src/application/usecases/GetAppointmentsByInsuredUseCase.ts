@@ -2,6 +2,7 @@ import { Appointment } from '../../domain/Appointment';
 import { AppointmentRepository } from '../../domain/repositories/AppointmentRepository';
 import { ValidationService } from '../../domain/services/ValidationService';
 import { ValidationError } from '../../domain/errors/DomainError';
+import { ErrorMessages } from '../../domain/constants/ErrorMessages';
 
 export type GetAppointmentsByInsuredDto = {
   insuredId: string;
@@ -15,11 +16,11 @@ export class GetAppointmentsByInsuredUseCase {
 
   async execute(dto: GetAppointmentsByInsuredDto): Promise<Appointment[]> {
     if (!dto.insuredId) {
-      throw new ValidationError('insuredId es requerido');
+      throw new ValidationError(ErrorMessages.VALIDATION.REQUIRED_INSURED_ID);
     }
 
     if (!this.validationService.validateInsuredId(dto.insuredId)) {
-      throw new ValidationError('Formato invalido para insuredId');
+      throw new ValidationError(ErrorMessages.VALIDATION.INVALID_INSURED_ID);
     }
 
     const appointments = await this.repository.findByInsuredId(dto.insuredId);
