@@ -19,6 +19,7 @@ info:
   version: '1.0.0'
   contact:
     name: Adriana Balceda
+
   license:
     name: ISC
 servers:
@@ -52,7 +53,7 @@ paths:
         3. Publica evento a SNS para procesamiento por pais  
         4. Retorna ID de cita y mensaje de confirmacion  
           
-        **Procesamiento asincrono:**  
+        **Procesamiento asincrono:** 
         - PE: Cola SQS -> Lambda -> MySQL appointments_pe  
         - CL: Cola SQS -> Lambda -> MySQL appointments_cl
       operationId: createAppointment
