@@ -297,24 +297,6 @@ npm run logs:dev      # Ver logs de desarrollo
 npm run logs:prod     # Ver logs de producción
 ```
 
-## Estructura del Proyecto
-
-```
-serverless-appointment-service/
-├── src/
-│   ├── handlers/          # Lambda functions
-│   ├── services/          # Lógica de negocio
-│   ├── models/            # Tipos y interfaces
-│   ├── utils/             # Utilidades
-│   └── config/            # Configuración
-├── docs/                  # Documentación Swagger
-├── tests/                 # Tests unitarios
-├── .env.example          # Variables de entorno ejemplo
-├── serverless.yml        # Configuración Serverless
-├── tsconfig.json         # Configuración TypeScript
-└── package.json          # Dependencias y scripts
-```
-
 ## Variables de Entorno
 
 Crea un archivo `.env` basado en `.env.example`:
