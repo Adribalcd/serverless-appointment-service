@@ -12,14 +12,13 @@ info:
     - MySQL para datos especificos por pais  
       
     **Flujo de procesamiento:**  
-    1. Cliente crea cita → almacenada en DynamoDB (PENDING)  
-    2. Evento publicado a SNS → distribuido a colas SQS por pais  
-    3. Procesadores especificos por pais → almacenan en MySQL  
-    4. Confirmacion via EventBridge → actualiza estado a COMPLETED
+    1. Cliente crea cita -> almacenada en DynamoDB (PENDING)  
+    2. Evento publicado a SNS -> distribuido a colas SQS por pais  
+    3. Procesadores especificos por pais -> almacenan en MySQL  
+    4. Confirmacion via EventBridge -> actualiza estado a COMPLETED
   version: '1.0.0'
   contact:
     name: Adriana Balceda
-    email: adriana.balceda@example.com
   license:
     name: ISC
 servers:
@@ -54,8 +53,8 @@ paths:
         4. Retorna ID de cita y mensaje de confirmacion  
           
         **Procesamiento asincrono:**  
-        - PE: Cola SQS → Lambda → MySQL appointments_pe  
-        - CL: Cola SQS → Lambda → MySQL appointments_cl
+        - PE: Cola SQS -> Lambda -> MySQL appointments_pe  
+        - CL: Cola SQS -> Lambda -> MySQL appointments_cl
       operationId: createAppointment
       tags:
         - Appointments
