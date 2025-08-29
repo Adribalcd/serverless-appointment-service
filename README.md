@@ -50,7 +50,7 @@ graph TD
 
 ## Tecnologías
 
-- **Runtime**: Node.js 18.x
+- **Runtime**: Node.js 22.x
 - **Language**: TypeScript
 - **Framework**: Serverless Framework v4
 - **Cloud Provider**: AWS
@@ -63,7 +63,7 @@ graph TD
 
 ## Requisitos
 
-- Node.js >= 18.x
+- Node.js >= 22.x
 - npm >= 8.x
 - AWS CLI configurado
 - Serverless Framework CLI
@@ -87,65 +87,6 @@ cp .env.example .env
 npm run build
 ```
 
-# Configuracion
-
-## Variables de Entorno
-
-# DynamoDB
-
-APPOINTMENT_TABLE=appointment-service-appointments-dev
-
-# SNS
-
-SNS_TOPIC_ARN=arn:aws:sns:us-east-1:123456789:appointment-events
-
-# EventBridge
-
-EVENT_BUS_NAME=default
-EVENT_SOURCE=custom.appointment
-
-# MySQL Peru
-
-MYSQL_PE_HOST=appointments-pe.region.rds.amazonaws.com
-MYSQL_PE_PORT=3306
-MYSQL_PE_DB=appointments_pe
-MYSQL_PE_USER=admin
-MYSQL_PE_PASSWORD=your_password
-
-# MySQL Chile
-
-MYSQL_CL_HOST=appointments-cl.region.rds.amazonaws.com
-MYSQL_CL_PORT=3306
-MYSQL_CL_DB=appointments_cl
-MYSQL_CL_USER=admin
-MYSQL_CL_PASSWORD=your_password
-
-# DynamoDB Schema
-
-```bash
-{
-  "appointmentId": "string",
-  "insuredId": "string",
-  "scheduleId": "number",
-  "countryISO": "string",
-  "status": "pending|completed",
-  "createdAt": "string",
-  "updatedAt": "string"
-}
-```
-
-# MySQL Schema (PE/CL)
-
-```bash
-CREATE TABLE appointments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  appointment_id VARCHAR(255) UNIQUE,
-  insured_id VARCHAR(5),
-  schedule_id INT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
 # Serverless Appointment Service
 
 Servicio de citas médicas construido con Serverless Framework v4, TypeScript y AWS.
@@ -157,7 +98,7 @@ Asegúrate de tener configuradas tus credenciales de AWS antes de iniciar.
 
 ### Requisitos Previos
 
-- **Node.js** >= 18.x
+- **Node.js** >= 22.x
 - **Serverless Framework CLI** instalado globalmente:
   ```bash
   npm install -g serverless
@@ -205,11 +146,6 @@ npm run start:offline
 
 Esto levanta un servidor en `http://localhost:3000/dev`
 
-### Endpoints Disponibles
-
-- `POST /appointments` - Crear nueva cita
-- `GET /appointments-insured` - Obtener citas por asegurado
-- `GET /docs` - Swagger UI interactivo
 
 ## Despliegue en AWS
 
@@ -274,23 +210,19 @@ curl https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/appointments
 ## 🛠️ Scripts Disponibles
 
 ```bash
-# Desarrollo
 npm run start:offline    # Ejecutar en local con serverless-offline
 npm run build           # Compilar TypeScript
 npm run dev            # Modo desarrollo con hot-reload
 
-# Despliegue
 npm run deploy:dev     # Desplegar a desarrollo
 npm run deploy:prod    # Desplegar a producción
 
-# Calidad de código
 npm run lint          # Ejecutar ESLint
 npm run lint:fix      # Corregir errores de ESLint automáticamente
 npm run format        # Formatear código con Prettier
 npm run test          # Ejecutar tests
 npm run test:watch    # Ejecutar tests en modo watch
 
-# Utilidades
 npm run remove:dev    # Eliminar stack de desarrollo
 npm run remove:prod   # Eliminar stack de producción
 npm run logs:dev      # Ver logs de desarrollo
@@ -323,34 +255,6 @@ RDS_HOST=your-rds-endpoint.amazonaws.com
 RDS_USERNAME=your-username
 RDS_PASSWORD=your-password
 RDS_DATABASE=your-database
-```
-
-## Troubleshooting
-
-### Error: "Cannot resolve serverless.yml"
-
-```bash
-# Asegúrate de estar en el directorio correcto
-pwd
-ls -la serverless.yml
-```
-
-### Error: "AWS credentials not found"
-
-```bash
-# Configura AWS CLI
-aws configure
-# O exporta las variables
-export AWS_ACCESS_KEY_ID=your-key
-export AWS_SECRET_ACCESS_KEY=your-secret
-```
-
-### Error: "Module not found"
-
-```bash
-# Reinstala dependencias
-rm -rf node_modules package-lock.json
-npm install
 ```
 
 # Algunos Patrones de Diseño Implementados
